@@ -1,3 +1,7 @@
+// Kept as a TS string export (not a .sql file read via fs) on purpose: Vercel's serverless
+// bundler traces static imports reliably but can miss a runtime fs.readFileSync path, which
+// would make the schema silently fail to load in production.
+export const SCHEMA_SQL = `
 -- Material Codification Platform — schema
 -- SQLite. This mirrors, at prototype scale, the split SAP itself uses:
 -- material master (core fields) + classification (class/characteristics).
@@ -7,15 +11,15 @@ CREATE TABLE IF NOT EXISTS taxonomy_nodes (
   parent_id TEXT REFERENCES taxonomy_nodes(id),
   name TEXT NOT NULL,
   level INTEGER NOT NULL,
-  class_code TEXT,              -- set only on leaf nodes that have a classification class
-  material_group TEXT,          -- SAP material group this maps to
+  class_code TEXT,
+  material_group TEXT,
   description TEXT
 );
 
 CREATE TABLE IF NOT EXISTS classes (
   code TEXT PRIMARY KEY,
   name TEXT NOT NULL,
-  naming_template TEXT NOT NULL,     -- e.g. "{noun} {modifier} {series} {seal} {make}"
+  naming_template TEXT NOT NULL,
   noun TEXT NOT NULL
 );
 
@@ -24,14 +28,13 @@ CREATE TABLE IF NOT EXISTS characteristics (
   class_code TEXT NOT NULL REFERENCES classes(code),
   name TEXT NOT NULL,
   field_key TEXT NOT NULL,
-  data_type TEXT NOT NULL,      -- text, number, enum
+  data_type TEXT NOT NULL,
   unit TEXT,
   mandatory INTEGER NOT NULL DEFAULT 0,
-  enum_values TEXT,             -- comma separated if data_type = enum
+  enum_values TEXT,
   sort_order INTEGER NOT NULL DEFAULT 0
 );
 
--- Existing SAP material master extract (the "already codified" universe we check against)
 CREATE TABLE IF NOT EXISTS materials (
   material_number TEXT PRIMARY KEY,
   description TEXT NOT NULL,
@@ -43,20 +46,40 @@ CREATE TABLE IF NOT EXISTS materials (
   manufacturer TEXT,
   mfr_part_no TEXT,
   plant TEXT NOT NULL,
-  status TEXT NOT NULL DEFAULT 'Active',   -- Active, Blocked, Marked for Deletion
+  status TEXT NOT NULL DEFAULT 'Active',
   characteristics_json TEXT NOT NULL DEFAULT '{}',
   created_on TEXT NOT NULL,
   last_movement TEXT,
   annual_spend REAL DEFAULT 0,
-  dq_score INTEGER DEFAULT 100            -- data quality completeness score 0-100
+  dq_score INTEGER DEFAULT 100
 );
 
 CREATE TABLE IF NOT EXISTS users (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
-  role TEXT NOT NULL,          -- Requester, Steward, CategoryOwner, Admin
-  email TEXT,
+  role TEXT NOT NULL,
+  email TEXT UNIQUE,
+  password TEXT NOT NULL,
   plant TEXT
+);
+
+CREATE TABLE IF NOT EXISTS sessions (
+  token TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES users(id),
+  created_at TEXT NOT NULL,
+  expires_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS import_batches (
+  id TEXT PRIMARY KEY,
+  filename TEXT,
+  class_code TEXT,
+  actor_id TEXT,
+  actor_name TEXT,
+  total_rows INTEGER NOT NULL,
+  success_rows INTEGER NOT NULL,
+  error_rows INTEGER NOT NULL,
+  created_at TEXT NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS requests (
@@ -70,10 +93,9 @@ CREATE TABLE IF NOT EXISTS requests (
   mfr_part_no TEXT,
   generated_description TEXT,
   status TEXT NOT NULL DEFAULT 'Draft',
-  -- Draft, Duplicate Review, Pending Approval, Returned, Approved, Rejected, Created in SAP
-  duplicate_decision TEXT,     -- Reuse, ConfirmedNew, null
+  duplicate_decision TEXT,
   reused_material_number TEXT,
-  ai_confidence INTEGER,       -- confidence of AI auto-extraction/classification 0-100
+  ai_confidence INTEGER,
   sap_material_number TEXT,
   priority TEXT DEFAULT 'Normal',
   plant TEXT,
@@ -103,7 +125,8 @@ CREATE TABLE IF NOT EXISTS audit_log (
 CREATE TABLE IF NOT EXISTS chat_messages (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   session_id TEXT NOT NULL,
-  role TEXT NOT NULL,          -- user, assistant
+  role TEXT NOT NULL,
   content TEXT NOT NULL,
   created_at TEXT NOT NULL
 );
+`;

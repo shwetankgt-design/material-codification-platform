@@ -39,3 +39,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local sqlite database (reseeded automatically on first run — see src/lib/db.ts)
+/data/*.db
+/data/*.db-journal
+/data/*.db-wal
+/data/*.db-shm
