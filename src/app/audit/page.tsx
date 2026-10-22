@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 
-type Entry = { request_id: string; actor_name: string; action: string; detail: string; created_at: string };
+type Entry = { request_id: string | null; actor_name: string; action: string; detail: string; created_at: string };
 
 export default function AuditPage() {
   const [entries, setEntries] = useState<Entry[]>([]);
@@ -31,9 +31,15 @@ export default function AuditPage() {
                 {new Date(e.created_at).toLocaleString()}
               </td>
               <td>
-                <Link href={`/requests/${e.request_id}`} className="font-mono-ui text-[12px] underline">
-                  {e.request_id}
-                </Link>
+                {e.request_id ? (
+                  <Link href={`/requests/${e.request_id}`} className="font-mono-ui text-[12px] underline">
+                    {e.request_id}
+                  </Link>
+                ) : (
+                  <span className="text-[11.5px]" style={{ color: "var(--muted)" }}>
+                    —
+                  </span>
+                )}
               </td>
               <td className="text-[12.5px]">{e.actor_name}</td>
               <td className="text-[12.5px] font-medium">{e.action}</td>

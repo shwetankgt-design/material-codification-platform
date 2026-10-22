@@ -26,6 +26,7 @@ export default function NewRequestPage() {
   const [extraction, setExtraction] = useState<Extraction | null>(null);
   const [loadingExtract, setLoadingExtract] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   async function runExtraction(text: string) {
     setFreeText(text);
@@ -46,12 +47,18 @@ export default function NewRequestPage() {
 
   async function submit() {
     setSubmitting(true);
+    setSubmitError(null);
     const res = await fetch("/api/requests", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ freeText }),
     });
     const data = await res.json();
+    if (!res.ok || !data.id) {
+      setSubmitError(data.error ?? "Could not create the request — please try again.");
+      setSubmitting(false);
+      return;
+    }
     router.push(`/requests/${data.id}`);
   }
 
@@ -147,6 +154,11 @@ export default function NewRequestPage() {
                 {submitting ? <Loader2 size={14} className="animate-spin" /> : null}
                 Create request & run duplicate check <ArrowRight size={14} />
               </button>
+              {submitError && (
+                <div className="text-[12.5px] mt-2" style={{ color: "var(--bad)" }}>
+                  {submitError}
+                </div>
+              )}
             </>
           ) : (
             <div className="text-[13px]" style={{ color: "var(--bad)" }}>

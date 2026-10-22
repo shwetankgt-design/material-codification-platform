@@ -44,6 +44,7 @@ export default function RequestDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { permissions } = useUser();
   const [data, setData] = useState<{ request: RequestDetail; audit: AuditEntry[]; matches: Match[] } | null>(null);
+  const [notFound, setNotFound] = useState(false);
   const [mpn, setMpn] = useState("");
   const [checking, setChecking] = useState(false);
   const [matches, setMatches] = useState<Match[] | null>(null);
@@ -52,6 +53,10 @@ export default function RequestDetailPage() {
 
   const load = useCallback(() => {
     fetch(`/api/requests/${id}`).then((r) => r.json()).then((d) => {
+      if (!d.request) {
+        setNotFound(true);
+        return;
+      }
       setData(d);
       setMpn(d.request.mfr_part_no ?? "");
       if (d.matches?.length) {
@@ -73,6 +78,17 @@ export default function RequestDetailPage() {
     load();
   }, [load]);
 
+  if (notFound) {
+    return (
+      <div className="card p-10 max-w-[560px] text-center">
+        <h2 className="text-[15px] font-semibold mb-2">Request not found</h2>
+        <p className="text-[13px]" style={{ color: "var(--muted)" }}>
+          There&apos;s no request with id <span className="font-mono-ui">{id}</span>. It may have been deleted, or the
+          link may be stale.
+        </p>
+      </div>
+    );
+  }
   if (!data) return <div className="p-10 text-sm" style={{ color: "var(--muted)" }}>Loading…</div>;
   const { request } = data;
 
